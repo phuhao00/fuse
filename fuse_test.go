@@ -29,6 +29,10 @@ func (m *Manager) Run() {
 			handler := testRouter.GetHandler(req)
 			pr := m.GetPrincipal()
 			handler(req, pr)
+			//ch<-struct {
+			//	handler
+			//	pr
+			//}{}
 		}
 	}
 }
