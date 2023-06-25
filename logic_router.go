@@ -99,7 +99,7 @@ func (r *LogicRouter) Register(msgID uint64, msgHandler MsgHandler) bool {
 	return true
 }
 
-func (r *LogicRouter) RegisterForwardHandler(msgID uint16, msgHandler ForwardMessageHandler) bool {
+func (r *LogicRouter) RegisterForwardHandler(msgID uint64, msgHandler ForwardMessageHandler) bool {
 	if msgID >= math.MaxUint16 {
 		logger.Error("too many protobuf messages (max = %v)", math.MaxUint16)
 		return false
@@ -285,7 +285,7 @@ func (r *LogicRouter) Unmarshal(data []byte, msg interface{}) error {
 	return proto.UnmarshalMerge(data[2:], pbMsg)
 }
 
-func (r *LogicRouter) Marshal(msgID uint16, msg interface{}) ([]byte, error) {
+func (r *LogicRouter) Marshal(msgID uint64, msg interface{}) ([]byte, error) {
 	pbMsg, ok := msg.(proto.Message)
 	if !ok {
 		return []byte{}, fmt.Errorf("msg is not protobuf message")
@@ -299,10 +299,10 @@ func (r *LogicRouter) Marshal(msgID uint16, msg interface{}) ([]byte, error) {
 	buf := make([]byte, 4+len(data))
 	if r.littleEndian {
 		binary.LittleEndian.PutUint16(buf[0:2], 0)
-		binary.LittleEndian.PutUint16(buf[2:], msgID)
+		binary.LittleEndian.PutUint64(buf[2:], msgID)
 	} else {
 		binary.BigEndian.PutUint16(buf[0:2], 0)
-		binary.BigEndian.PutUint16(buf[2:], msgID)
+		binary.BigEndian.PutUint64(buf[2:], msgID)
 	}
 	copy(buf[4:], data)
 	return buf, err
