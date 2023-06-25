@@ -14,9 +14,9 @@ import (
 type LogicRouter struct {
 	littleEndian       bool
 	forwardMsgHandlers *sync.Map
-	msgHandlers        map[uint16]MsgHandler
-	sceneMsgHandlers   map[uint16]SceneMsgHandler
-	serverMsgHandlers  map[uint16]ServerMsgHandler
+	msgHandlers        map[uint64]MsgHandler
+	sceneMsgHandlers   map[uint64]SceneMsgHandler
+	serverMsgHandlers  map[uint64]ServerMsgHandler
 	defaultHandler     MsgHandler
 	preHandler         MsgHandler
 	postHandler        MsgHandler
@@ -27,22 +27,22 @@ type LogicRouter struct {
 	//forwardMsgHandlers map[uint16]ForwardMessageHandler
 }
 
-type MsgHandler func(msgID uint16, data []byte)
+type MsgHandler func(msgID uint64, data []byte)
 
-type ForwardMessageHandler func(srvID string, userID uint64, msgID uint16, data []byte)
+type ForwardMessageHandler func(srvID string, userID uint64, msgID uint64, data []byte)
 
-type SceneMsgHandler func(msgID uint16, data []byte)
+type SceneMsgHandler func(msgID uint64, data []byte)
 
-type ServerMsgHandler func(srvID string, msgID uint16, data []byte)
+type ServerMsgHandler func(srvID string, msgID uint64, data []byte)
 
 func NewLogicRouter() *LogicRouter {
 	r := new(LogicRouter)
 	r.littleEndian = true
-	r.msgHandlers = make(map[uint16]MsgHandler)
+	r.msgHandlers = make(map[uint64]MsgHandler)
 	//r.forwardMsgHandlers = make(map[uint16]ForwardMessageHandler)
 	r.forwardMsgHandlers = &sync.Map{}
-	r.sceneMsgHandlers = make(map[uint16]SceneMsgHandler)
-	r.serverMsgHandlers = make(map[uint16]ServerMsgHandler)
+	r.sceneMsgHandlers = make(map[uint64]SceneMsgHandler)
+	r.serverMsgHandlers = make(map[uint64]ServerMsgHandler)
 	return r
 }
 
@@ -85,7 +85,7 @@ func (r *LogicRouter) SetByteOrder(littleEndian bool) {
 	r.littleEndian = littleEndian
 }
 
-func (r *LogicRouter) Register(msgID uint16, msgHandler MsgHandler) bool {
+func (r *LogicRouter) Register(msgID uint64, msgHandler MsgHandler) bool {
 	if msgID >= math.MaxUint16 {
 		logger.Error("too many protobuf messages (max = %v)", math.MaxUint16)
 		return false
@@ -113,7 +113,7 @@ func (r *LogicRouter) RegisterForwardHandler(msgID uint16, msgHandler ForwardMes
 	return true
 }
 
-func (r *LogicRouter) RegSceneMsgHandler(msgID uint16, msgHandler SceneMsgHandler) bool {
+func (r *LogicRouter) RegSceneMsgHandler(msgID uint64, msgHandler SceneMsgHandler) bool {
 	if msgID >= math.MaxUint16 {
 		logger.Error("too many protobuf messages (max = %v)", math.MaxUint16)
 		return false
@@ -127,7 +127,7 @@ func (r *LogicRouter) RegSceneMsgHandler(msgID uint16, msgHandler SceneMsgHandle
 	return true
 }
 
-func (r *LogicRouter) RegServerMsgHandler(msgID uint16, msgHandler ServerMsgHandler) bool {
+func (r *LogicRouter) RegServerMsgHandler(msgID uint64, msgHandler ServerMsgHandler) bool {
 	if msgID >= math.MaxUint16 {
 		logger.Error("too many protobuf messages (max = %v)", math.MaxUint16)
 		return false
@@ -141,17 +141,17 @@ func (r *LogicRouter) RegServerMsgHandler(msgID uint16, msgHandler ServerMsgHand
 	return true
 }
 
-func (r *LogicRouter) Route(data []byte) (uint16, error) {
+func (r *LogicRouter) Route(data []byte) (uint64, error) {
 
 	if len(data) < 2 {
 		return 0, errors.New("protobuf data too short")
 	}
 
-	var msgID uint16
+	var msgID uint64
 	if r.littleEndian {
-		msgID = binary.LittleEndian.Uint16(data)
+		msgID = binary.LittleEndian.Uint64(data)
 	} else {
-		msgID = binary.BigEndian.Uint16(data)
+		msgID = binary.BigEndian.Uint64(data)
 	}
 
 	handler, ok := r.msgHandlers[msgID]
@@ -175,17 +175,17 @@ func (r *LogicRouter) Route(data []byte) (uint16, error) {
 	return msgID, nil
 }
 
-func (r *LogicRouter) ForwardRoute(srvID string, userID uint64, data []byte) (uint16, error) {
+func (r *LogicRouter) ForwardRoute(srvID string, userID uint64, data []byte) (uint64, error) {
 
 	if len(data) < 2 {
 		return 0, errors.New("protobuf data too short")
 	}
 
-	var msgID uint16
+	var msgID uint64
 	if r.littleEndian {
-		msgID = binary.LittleEndian.Uint16(data)
+		msgID = binary.LittleEndian.Uint64(data)
 	} else {
-		msgID = binary.BigEndian.Uint16(data)
+		msgID = binary.BigEndian.Uint64(data)
 	}
 
 	handler, ok := r.forwardMsgHandlers.Load(msgID)
@@ -206,17 +206,17 @@ func (r *LogicRouter) ForwardRoute(srvID string, userID uint64, data []byte) (ui
 	return msgID, nil
 }
 
-func (r *LogicRouter) SceneRoute(data []byte) (uint16, error) {
+func (r *LogicRouter) SceneRoute(data []byte) (uint64, error) {
 
 	if len(data) < 2 {
 		return 0, errors.New("protobuf data too short")
 	}
 
-	var msgID uint16
+	var msgID uint64
 	if r.littleEndian {
-		msgID = binary.LittleEndian.Uint16(data)
+		msgID = binary.LittleEndian.Uint64(data)
 	} else {
-		msgID = binary.BigEndian.Uint16(data)
+		msgID = binary.BigEndian.Uint64(data)
 	}
 
 	handler, ok := r.sceneMsgHandlers[msgID]
@@ -236,17 +236,17 @@ func (r *LogicRouter) SceneRoute(data []byte) (uint16, error) {
 	return msgID, nil
 }
 
-func (r *LogicRouter) ServerRoute(srvID string, data []byte) (uint16, error) {
+func (r *LogicRouter) ServerRoute(srvID string, data []byte) (uint64, error) {
 
 	if len(data) < 2 {
 		return 0, errors.New("protobuf data too short")
 	}
 
-	var msgID uint16
+	var msgID uint64
 	if r.littleEndian {
-		msgID = binary.LittleEndian.Uint16(data)
+		msgID = binary.LittleEndian.Uint64(data)
 	} else {
-		msgID = binary.BigEndian.Uint16(data)
+		msgID = binary.BigEndian.Uint64(data)
 	}
 
 	handler, ok := r.serverMsgHandlers[msgID]
